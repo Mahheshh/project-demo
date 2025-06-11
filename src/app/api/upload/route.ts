@@ -1,41 +1,101 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const fileSchema = z.object({
+  fileName: z.string(),
+  fileType: z.string(),
+  hash: z.string(),
+  dataSource: z.string(), // URL to local path or base64 for images
+});
+
+const uploadBodySchema = z.object({
+  caseNo: z.number(),
+  files: z.array(fileSchema),
+});
 
 export async function GET() {
   return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
 }
 
-interface UploadBody {
-  caseNo: number;
-  hashList: string[];
-}
-
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { caseNo, hashList } = body as UploadBody;
+  try {
+    const body = await req.json();
+    const validation = uploadBodySchema.safeParse(body);
 
-  const existingCase = await prisma.case.findUnique({
-    where: { id: caseNo },
-    include: { versions: true },
-  });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: validation.error.errors },
+        { status: 400 }
+      );
+    }
 
-  if (!existingCase) {
-    return NextResponse.json({ error: "Case not found" }, { status: 404 });
+    const { caseNo, files } = validation.data;
+
+    // Check if case exists
+    const existingCase = await prisma.case.findUnique({
+      where: { id: caseNo },
+      select: {
+        id: true,
+        versions: {
+          select: {
+            versionNo: true,
+          },
+          orderBy: {
+            versionNo: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!existingCase) {
+      return NextResponse.json({ error: "Case not found" }, { status: 404 });
+    }
+
+    const lastVersionNo = existingCase.versions[0]?.versionNo || 0;
+    const newVersionNo = lastVersionNo + 1;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const newVersion = await tx.version.create({
+        data: {
+          versionNo: newVersionNo,
+          caseId: existingCase.id,
+        },
+      });
+
+      const createdFiles = await tx.file.createMany({
+        data: files.map((file) => ({
+          fileName: file.fileName,
+          fileType: file.fileType,
+          hash: file.hash,
+          dataSource: file.dataSource,
+          versionId: newVersion.id,
+        })),
+      });
+
+      return {
+        version: newVersion,
+        filesCreated: createdFiles.count,
+      };
+    });
+
+    return NextResponse.json(
+      {
+        message: "Files uploaded successfully",
+        version: result.version,
+        filesUploaded: result.filesCreated,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Upload failed:", error);
+    return NextResponse.json(
+      { 
+        message: "Failed to upload files", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      },
+      { status: 500 }
+    );
   }
-
-  const lastVersion = existingCase.versions.reduce(
-    (max: number, version: { versionNo: number }) =>
-      version.versionNo > max ? version.versionNo : max,
-    0
-  );
-
-  const newVersion = await prisma.version.create({
-    data: {
-      versionNo: lastVersion + 1,
-      caseId: existingCase.id,
-      hashes: hashList,
-    },
-  });
-
-  return NextResponse.json({ version: newVersion }, { status: 201 });
 }

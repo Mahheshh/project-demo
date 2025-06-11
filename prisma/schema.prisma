@@ -22,9 +22,19 @@ model Case {
 }
 
 model Version {
-  id        Int      @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   versionNo Int
-  hashes    String[]
-  case      Case     @relation(fields: [caseId], references: [id])
+  case      Case   @relation(fields: [caseId], references: [id])
   caseId    Int
+  files     File[]
+}
+
+model File {
+  id         Int     @id @default(autoincrement())
+  fileName   String
+  fileType   String
+  hash       String
+  dataSource String // either a url to localpath or base64 for images
+  version    Version @relation(fields: [versionId], references: [id])
+  versionId  Int
 }

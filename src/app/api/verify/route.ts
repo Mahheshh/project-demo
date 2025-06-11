@@ -14,28 +14,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const record = await prisma.case.findUnique({
-      where: { id: parseInt(caseNo) },
-      include: {
-        versions: true,
+    const caseId = parseInt(caseNo);
+
+    const version = await prisma.version.findFirst({
+      where: {
+        caseId: caseId,
+        hashes: {
+          has: hash,
+        },
       },
     });
 
-    if (!record) {
-      return NextResponse.json({ error: "Case not found" }, { status: 404 });
-    }
-
-    let isValid = false;
-
-    for (const version of record.versions) {
-      if (version.hashes.includes(hash)) {
-        isValid = true;
-        break;
-      }
-    }
+    const isValid = !!version;
 
     return NextResponse.json({ isValid });
-  } catch {
+  } catch (error) {
+    console.error("Verification failed:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

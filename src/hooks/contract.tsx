@@ -164,21 +164,37 @@ export const useCourtContract = () => {
 
     useEffect(() => {
         const init = async () => {
+            console.log('🚀 Initializing court contract...');
+            
             if (!context) {
+                console.log('❌ No wallet context found');
                 return
             }
+            
             if (!context.isConnected) {
+                console.log('🔗 Wallet not connected, attempting to connect...');
                 await context.connectWallet();
             }
+            
             try {
                 if (context.isConnected && context.signer) {
+                    console.log('✅ Wallet connected successfully');
+                    
                     if (context.web3Instance) {
+                        console.log('🔧 Creating contract instance...');
                         const contractInstance = new context.web3Instance.eth.Contract(abi, contractAddress);
                         setContract(contractInstance);
+                        console.log('🎉 Court contract initialized successfully!');
+                    } else {
+                        console.log('⚠️ Web3 instance not available');
                     }
+                } else {
+                    console.log('⚠️ Wallet not connected or signer not available');
                 }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
+                const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+                console.log('💥 Error initializing contract:', errorMessage);
+                setError(errorMessage);
             }
         };
 

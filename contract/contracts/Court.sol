@@ -2,7 +2,7 @@
 
 pragma solidity = 0.8.28;
 
- contract Authority {
+contract Authority {
     address[] public judges;
 
     constructor() {
@@ -26,7 +26,7 @@ pragma solidity = 0.8.28;
     }
 }
 
-contract Court {
+contract Court is Authority {
     struct CaseData {
         uint version;
         string[] hashesh;

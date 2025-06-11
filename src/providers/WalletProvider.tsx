@@ -66,6 +66,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     const checkWalletConnection = async () => {
       try {
         if (window.ethereum) {
+          setWeb3Instance(new Web3(window.ethereum));
           const web3Provider = new ethers.BrowserProvider(window.ethereum);
           const accounts = await web3Provider.listAccounts();
           if (accounts.length > 0) {
