@@ -6,7 +6,7 @@ const fileSchema = z.object({
   fileName: z.string(),
   fileType: z.string(),
   hash: z.string(),
-  dataSource: z.string(), // URL to local path or base64 for images
+  dataSource: z.string(), // blob
 });
 
 const uploadBodySchema = z.object({
@@ -20,10 +20,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("POST request received for file upload");
+
     const body = await req.json();
+
     const validation = uploadBodySchema.safeParse(body);
 
     if (!validation.success) {
+      console.log("Validation failed:", validation.error.errors);
       return NextResponse.json(
         { error: "Invalid request body", details: validation.error.errors },
         { status: 400 }
@@ -31,8 +35,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { caseNo, files } = validation.data;
+    console.log(
+      "Validated data - caseNo:",
+      caseNo,
+      "files count:",
+      files.length
+    );
 
-    // Check if case exists
+    console.log(files[0].dataSource.length, files[0].dataSource.slice(0, 15));
+
     const existingCase = await prisma.case.findUnique({
       where: { id: caseNo },
       select: {
@@ -50,35 +61,48 @@ export async function POST(req: NextRequest) {
     });
 
     if (!existingCase) {
+      console.log("Case not found for caseNo:", caseNo);
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
+    console.log("Existing case found:", existingCase);
+
     const lastVersionNo = existingCase.versions[0]?.versionNo || 0;
     const newVersionNo = lastVersionNo + 1;
+    console.log("Creating new version:", newVersionNo);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const newVersion = await tx.version.create({
-        data: {
-          versionNo: newVersionNo,
-          caseId: existingCase.id,
-        },
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        console.log("Starting transaction");
 
-      const createdFiles = await tx.file.createMany({
-        data: files.map((file) => ({
-          fileName: file.fileName,
-          fileType: file.fileType,
-          hash: file.hash,
-          dataSource: file.dataSource,
-          versionId: newVersion.id,
-        })),
-      });
+        const newVersion = await tx.version.create({
+          data: {
+            versionNo: newVersionNo,
+            caseId: existingCase.id,
+          },
+        });
+        console.log("New version created:", newVersion);
 
-      return {
-        version: newVersion,
-        filesCreated: createdFiles.count,
-      };
-    });
+        const createdFiles = await tx.file.createMany({
+          data: files.map((file) => ({
+            fileName: file.fileName,
+            fileType: file.fileType,
+            hash: file.hash,
+            dataSource: file.dataSource,
+            versionId: newVersion.id,
+          })),
+        });
+        console.log("Files created, count:", createdFiles.count);
+
+        return {
+          version: newVersion,
+          filesCreated: createdFiles.count,
+        };
+      },
+      { timeout: 500000 }
+    );
+
+    console.log("Transaction completed successfully");
 
     return NextResponse.json(
       {
@@ -91,9 +115,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Upload failed:", error);
     return NextResponse.json(
-      { 
-        message: "Failed to upload files", 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      {
+        message: "Failed to upload files",
+        error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

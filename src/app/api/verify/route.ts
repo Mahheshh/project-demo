@@ -16,16 +16,26 @@ export async function GET(request: Request) {
   try {
     const caseId = parseInt(caseNo);
 
-    const version = await prisma.version.findFirst({
+    if (isNaN(caseId)) {
+      return NextResponse.json(
+        { error: "Invalid case number" },
+        { status: 400 }
+      );
+    }
+
+    const file = await prisma.file.findFirst({
       where: {
-        caseId: caseId,
-        hashes: {
-          has: hash,
+        hash: hash,
+        version: {
+          caseId: caseId,
         },
       },
+      select: {
+        id: true,
+      },
     });
-
-    const isValid = !!version;
+    console.log(file);
+    const isValid = !!file;
 
     return NextResponse.json({ isValid });
   } catch (error) {

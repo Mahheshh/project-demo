@@ -34,7 +34,7 @@ model File {
   fileName   String
   fileType   String
   hash       String
-  dataSource String // either a url to localpath or base64 for images
+  dataSource String
   version    Version @relation(fields: [versionId], references: [id])
   versionId  Int
 }

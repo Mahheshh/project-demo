@@ -2,11 +2,14 @@
 
 pragma solidity = 0.8.28;
 
+import "hardhat/console.sol";
+
 contract Authority {
     address[] public judges;
 
     constructor() {
         judges.push(msg.sender);
+        console.log("Authority contract deployed, initial judge:", msg.sender);
     }
 
     modifier onlyJudge() {
@@ -18,11 +21,13 @@ contract Authority {
             }
         }
         require(isJudge, "Only a judge can perform this action");
+        console.log("Judge access verified for:", msg.sender);
         _;
     }
 
     function addJudge(address judge) public onlyJudge {
         judges.push(judge);
+        console.log("New judge added:", judge);
     }
 }
 
@@ -53,6 +58,7 @@ contract Court is Authority {
         
         newCase.data[0].version = 0;
 
+        console.log("Case created with number:", newCase.caseNo);
         emit CaseCreated(newCase.caseNo);
     }
 
@@ -71,11 +77,13 @@ contract Court is Authority {
         newData.hashesh = hashArray;
         newData.version = newVersion;
 
+        console.log("Document added to case:", caseNo, "version:", newVersion);
         emit DocumentAdded(caseNo, newVersion);
     }
 
     function getCase(uint caseNo) public view returns (CourtData memory) {
         CourtData storage courtCase = cases[caseNo - 1];
+        console.log("Case retrieved:", caseNo);
         return courtCase;
     }
 }

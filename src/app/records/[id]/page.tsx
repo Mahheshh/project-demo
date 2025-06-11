@@ -5,7 +5,7 @@ import { notFound, useParams } from 'next/navigation';
 import { Poppins } from "next/font/google";
 import { useState, useEffect } from 'react';
 import getCaseDetails from '@/app/actions/getCaseDetails';
-import Image from 'next/image';
+import FilePreview from '@/components/filePreview';
 
 const poppins = Poppins({ weight: ["400", "600", "700"], subsets: ["latin"] });
 
@@ -66,36 +66,13 @@ export default function CaseDetails() {
           </div>
         </div>
 
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 min-h-[300px] flex items-center justify-center">
-          {selectedFile.fileName.split('.').pop()?.toLowerCase() === "png" ? (
-            <Image
-              src={selectedFile.dataSource}
-              alt={selectedFile.fileName}
-              width={400}
-              height={400}
-              className="max-w-full max-h-[400px] object-contain rounded-lg shadow-lg"
-            />
-          ) : selectedFile.fileName.split('.').pop()?.toLowerCase() === "pdf" ? (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-gray-600 font-medium">PDF Preview</p>
-              <p className="text-sm text-gray-500 mt-2">PDF preview not available</p>
-            </div>
-          ) : (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-gray-600 font-medium">File Type Not Supported</p>
-              <p className="text-sm text-gray-500 mt-2">Preview not available for this file type</p>
-            </div>
-          )}
+        <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 min-h-[400px] bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
+          <FilePreview selectedFile={{
+            dataSource: selectedFile.dataSource,
+            fileName: selectedFile.fileName
+          }} poppins={{
+            className: poppins.className
+          }} />
         </div>
 
         <div className="mt-4 space-y-2">
@@ -271,7 +248,7 @@ export default function CaseDetails() {
 
           <div className="lg:w-1/3">
             <div className="sticky top-8">
-              <div className="group relative bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl p-8 hover:transform hover:scale-[1.02] transition-all duration-500 hover:shadow-2xl">
+              <div className="group relative bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl p-8 transition-all duration-500 hover:shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="relative">
                   {renderFilePreview()}

@@ -155,7 +155,7 @@ const abi = [
         "stateMutability": "view",
         "type": "function"
     }
-];
+]
 
 export const useCourtContract = () => {
     const [contract, setContract] = useState<Contract<typeof abi> | null>(null);
@@ -165,21 +165,21 @@ export const useCourtContract = () => {
     useEffect(() => {
         const init = async () => {
             console.log('🚀 Initializing court contract...');
-            
+
             if (!context) {
                 console.log('❌ No wallet context found');
                 return
             }
-            
+
             if (!context.isConnected) {
                 console.log('🔗 Wallet not connected, attempting to connect...');
                 await context.connectWallet();
             }
-            
+
             try {
                 if (context.isConnected && context.signer) {
                     console.log('✅ Wallet connected successfully');
-                    
+
                     if (context.web3Instance) {
                         console.log('🔧 Creating contract instance...');
                         const contractInstance = new context.web3Instance.eth.Contract(abi, contractAddress);

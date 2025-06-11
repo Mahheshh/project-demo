@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+import FilePreview from '@/components/filePreview';
 import { useCourtContract } from '@/hooks/contract';
 import generateHash from '@/lib/hashGenerator';
 import { WalletContext } from '@/providers/WalletProvider';
@@ -15,11 +17,10 @@ const Upload = () => {
     const [file, setFile] = useState<File[]>([]);
     const [fileData, setFileData] = useState<FileData[]>([]);
     const [caseNo, setCaseNo] = useState('');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [documents, setDocuments] = useState<any[]>([]);
     const [error, setError] = useState('');
-    // const { contract } = useCourtContract();
-    // const wallet = useContext(WalletContext);
+    const { contract } = useCourtContract();
+    const wallet = useContext(WalletContext);
     const [isUploading, setIsUploading] = useState<boolean>(false);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,27 +35,23 @@ const Upload = () => {
                 const hash = await generateHash(file);
                 const fileExtension = file.name.split('.').pop() || '';
 
-                let dataSource: string;
-                if (fileExtension.toLowerCase() === 'png' || fileExtension.toLowerCase() === 'jpg' || fileExtension.toLowerCase() === 'jpeg') {
+                const base64String = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
-                    const base64Promise = new Promise<string>((resolve) => {
-                        reader.onload = () => resolve(reader.result as string);
-                        reader.readAsDataURL(file);
-                    });
-                    dataSource = await base64Promise;
-                } else {
-                    dataSource = `uploads/${file.name}`;
-                }
+                    reader.onloadend = () => {
+                        resolve(reader.result as string);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
 
                 return {
                     fileName: file.name,
                     fileType: fileExtension.toLowerCase(),
                     hash: hash,
-                    dataSource: dataSource
+                    dataSource: base64String
                 };
             })
         );
-
         setFileData(filesData);
     };
 
@@ -65,7 +62,19 @@ const Upload = () => {
         }
         try {
             setIsUploading(true);
-            // contract?.methods.addDocument().send({ from: wallet?.address as string })
+            contract!.methods.addDocument(caseNo, [''])
+                .send({ from: wallet?.address as string })
+                .on('confirmation', () => {
+                    console.log('Transaction confirmed:');
+                })
+                .on('transactionHash', (hash: string) => {
+                    console.log('Transaction hash:', hash);
+                })
+                .on('error', (error: any) => {
+                    console.error('Transaction error:', error);
+                    setIsUploading(false);
+                });
+
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
@@ -80,7 +89,6 @@ const Upload = () => {
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.error || 'Upload failed');
                 return;
             }
 
@@ -253,13 +261,6 @@ const Upload = () => {
                                                             </div>
                                                         </div>
                                                     </div>
-
-                                                    <div>
-                                                        <p className="text-xs font-medium text-gray-500 mb-1">Data Source:</p>
-                                                        <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700 overflow-hidden">
-                                                            {fileInfo.dataSource}
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -314,15 +315,48 @@ const Upload = () => {
 
                     {/* Additional Information Section */}
                     <div className="mt-6 lg:mt-8">
-                        <div className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl p-6 sm:p-8">
-                            <div className="text-center">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                    </svg>
+                        <div className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl overflow-hidden">
+                            <div className="p-4 sm:p-6 border-b border-gray-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg flex items-center justify-center shrink-0">
+                                        <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">File Preview</h3>
                                 </div>
-                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Upload Information</h3>
-                                <p className="text-gray-600 text-sm sm:text-base">Files will be hashed and stored securely with metadata. Each upload creates a new version for the case.</p>
+                            </div>
+
+                            <div className="p-4 sm:p-6">
+                                {fileData.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {fileData.map((fileInfo, index) => (
+                                            <div key={index} className="border border-gray-200 rounded-xl overflow-hidden">
+                                                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                                                    <h4 className="font-semibold text-gray-900 text-sm">{fileInfo.fileName}</h4>
+                                                </div>
+                                                <div className="p-4">
+                                                    <FilePreview selectedFile={{
+                                                        dataSource: fileInfo.dataSource,
+                                                        fileName: fileInfo.fileName
+                                                    }} poppins={{
+                                                        className: ''
+                                                    }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-gray-500 font-medium">No files selected for preview</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

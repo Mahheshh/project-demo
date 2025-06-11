@@ -91,7 +91,7 @@ const RecordsPage = () => {
                                 <span className="text-sm text-gray-600 break-words">{legalCase.defendant}</span>
                             </div>
                         </div>
-                        
+
                         {/* Updated Statistics */}
                         <div className="flex flex-wrap gap-2">
                             <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">

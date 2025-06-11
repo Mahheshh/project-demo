@@ -36,8 +36,14 @@ export async function POST(req: NextRequest) {
     const recordsWithStats = records.map((record) => ({
       ...record,
       totalVersions: record.versions.length,
-      totalFiles: record.versions.reduce((total, version) => total + version.files.length, 0),
-      latestVersion: record.versions.length > 0 ? Math.max(...record.versions.map(v => v.versionNo)) : 0,
+      totalFiles: record.versions.reduce(
+        (total, version) => total + version.files.length,
+        0
+      ),
+      latestVersion:
+        record.versions.length > 0
+          ? Math.max(...record.versions.map((v) => v.versionNo))
+          : 0,
     }));
 
     return NextResponse.json(
