@@ -1,8 +1,7 @@
 'use client';
 
 import { useCourtContract } from '@/hooks/contract';
-import { WalletContext } from '@/providers/WalletProvider';
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 
 export default function NewCasePage() {
     const [formData, setFormData] = useState({
@@ -12,8 +11,8 @@ export default function NewCasePage() {
     });
     const [isCreating, setIsCreating] = useState<boolean>(false);
     const [error, setError] = useState('');
-    const wallet = useContext(WalletContext);
-    const { contract } = useCourtContract();
+    // const wallet = useContext(WalletContext);
+    const { contract, address } = useCourtContract();
     const [successMessage, setSuccessMessage] = useState<string>('');
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -45,32 +44,43 @@ export default function NewCasePage() {
             setIsCreating(true);
 
             console.log('Calling contract.methods.createCase()');
+            // make wallet sign a transaction
+            // await new Promise((resolve, reject) => {
             contract.methods.createCase()
-                .send({ from: wallet!.address as string })
+                .send({ from: address as string })
                 .on("error", (err) => {
                     console.error("Transaction error:", err);
-                    throw new Error("Failed to create case");
-                }).on("confirmation", (params) => console.log(JSON.stringify(params)))
+                    // reject(new Error("Failed to create case"));
+                })
+                .on("confirmation", (params) => {
+                    console.log(JSON.stringify(params));
+                    // resolve(params);
+                })
                 .on("transactionHash", (hash) => {
                     console.log("Transaction hash:", hash);
-                    setSuccessMessage(`Case Created with hash ${hash}`)
-                })
+                    setSuccessMessage(`Case Created with hash ${hash}`);
+                });
+            // });
 
             console.log('Blockchain transaction completed successfully');
             setError('');
 
-            console.log('Making API call to /api/case/create');
-            const resp = await fetch("/api/case/create", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
+            if (address as string === "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266") {
 
-            console.log('API response status:', resp.status);
-            const data = await resp.json();
-            console.log('API response data:', data);
+                console.log('Making API call to /api/case/create');
+                const resp = await fetch("/api/case/create", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                console.log('API response status:', resp.status);
+                const data: {id: string} = await resp.json();
+                console.log('API response data:', data);
+                alert(`case created with id ${data.id}`)
+            }
 
             setFormData({ caseTitle: '', defendant: "", attorney: "" });
             console.log('Case created successfully - form reset');

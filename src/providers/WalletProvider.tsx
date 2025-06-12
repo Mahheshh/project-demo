@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import { ethers } from "ethers";
 import { Web3 } from "web3";
@@ -43,7 +44,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       await web3Provider.send("eth_requestAccounts", []);
       const signerInstance = await web3Provider.getSigner();
       const userAddress = await signerInstance.getAddress();
-
+      
       setProvider(web3Provider);
       setSigner(signerInstance);
       setAddress(userAddress);
@@ -61,28 +62,27 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setIsConnected(false);
   };
 
-  // Check for existing wallet connection on component mount
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      try {
-        if (window.ethereum) {
-          setWeb3Instance(new Web3(window.ethereum));
-          const web3Provider = new ethers.BrowserProvider(window.ethereum);
-          const accounts = await web3Provider.listAccounts();
-          if (accounts.length > 0) {
-            setProvider(web3Provider);
-            setSigner(await web3Provider.getSigner());
-            setAddress(accounts[0].address);
-            setIsConnected(true);
-          }
+  const checkWalletConnection = useCallback(async () => {
+    try {
+      if (window.ethereum) {
+        const web3Provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await web3Provider.listAccounts();
+        setWeb3Instance(new Web3(window.ethereum));
+        if (accounts.length > 0) {
+          setProvider(web3Provider);
+          setSigner(await web3Provider.getSigner());
+          setAddress(accounts[0].address);
+          setIsConnected(true);
         }
-      } catch (error) {
-        console.error("Error checking wallet connection:", error);
       }
-    };
-
-    checkWalletConnection();
+    } catch (error) {
+      console.error("Error checking wallet connection:", error);
+    }
   }, []);
+
+  useEffect(() => {
+    checkWalletConnection();
+  }, [checkWalletConnection]);
 
   const contextValue: WalletContextProps = {
     web3Instance,

@@ -62,18 +62,21 @@ const Upload = () => {
         }
         try {
             setIsUploading(true);
+            // await new Promise((resolve, reject) => {
             contract!.methods.addDocument(caseNo, [''])
                 .send({ from: wallet?.address as string })
                 .on('confirmation', () => {
                     console.log('Transaction confirmed:');
+                    // resolve(true);
                 })
                 .on('transactionHash', (hash: string) => {
                     console.log('Transaction hash:', hash);
                 })
                 .on('error', (error: any) => {
                     console.error('Transaction error:', error);
-                    setIsUploading(false);
+                    // reject(error);
                 });
+            // });
 
             const res = await fetch('/api/upload', {
                 method: 'POST',
@@ -97,7 +100,7 @@ const Upload = () => {
             setCaseNo('');
             setError('');
             setDocuments([]);
-            alert(`Files uploaded successfully! Version ${data.version.versionNo} created with ${data.filesUploaded} files.`);
+            // alert(`Files uploaded successfully! Version ${data.version.versionNo} created with ${data.filesUploaded} files.`);
 
         } catch (err) {
             setError(`Failed to upload files ${err}`);

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "run-app": "cd contract && npx hardhat node & sleep 5 && npx hardhat ignition deploy ignition/modules/court.ts --network localhost && cd .. && next dev"
+    "start-node": "cd contract && npx hardhat node",
+    "deploy": "npx hardhat ignition deploy ignition/modules/court.ts --network localhost"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-ignition": "^0.15.9",

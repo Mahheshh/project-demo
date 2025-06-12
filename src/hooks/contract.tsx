@@ -163,43 +163,42 @@ export const useCourtContract = () => {
     const context = useContext(WalletContext);
 
     useEffect(() => {
+
         const init = async () => {
             console.log('🚀 Initializing court contract...');
 
             if (!context) {
                 console.log('❌ No wallet context found');
-                return
+                return;
             }
 
+            // Only proceed if wallet is connected and web3Instance exists
             if (!context.isConnected) {
-                console.log('🔗 Wallet not connected, attempting to connect...');
-                await context.connectWallet();
+                console.log('⚠️ Wallet not connected');
+                context.connectWallet();
+                return;
+            }
+
+            if (!context.web3Instance) {
+                console.log('⚠️ web3Instance not available');
+                return;
             }
 
             try {
-                if (context.isConnected && context.signer) {
-                    console.log('✅ Wallet connected successfully');
-
-                    if (context.web3Instance) {
-                        console.log('🔧 Creating contract instance...');
-                        const contractInstance = new context.web3Instance.eth.Contract(abi, contractAddress);
-                        setContract(contractInstance);
-                        console.log('🎉 Court contract initialized successfully!');
-                    } else {
-                        console.log('⚠️ Web3 instance not available');
-                    }
-                } else {
-                    console.log('⚠️ Wallet not connected or signer not available');
-                }
+                console.log('🔧 Creating contract instance...');
+                const contractInstance = new context.web3Instance.eth.Contract(abi, contractAddress);
+                setContract(contractInstance);
+                console.log('🎉 Court contract initialized successfully!');
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
                 console.log('💥 Error initializing contract:', errorMessage);
                 setError(errorMessage);
             }
         };
+        if (context) {
+            init();
+        }
+    }, [context, context?.address, context?.isConnected, context?.web3Instance]);
 
-        init();
-    }, [context]);
-
-    return { contract, error };
+    return { contract, address: context?.address, error };
 };
